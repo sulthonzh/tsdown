@@ -1,0 +1,12 @@
+{
+  "name": "tsdown",
+  "version": "1.0.0",
+  "description": "Analyze TypeScript compilation time per file. Find slow files, bottlenecks, and track build performance.",
+  "main": "src/index.js",
+  "bin": { "tsdown": "./cli.js" },
+  "files": ["src/", "cli.js"],
+  "keywords": ["typescript", "compilation", "performance", "analyze", "build-time", "benchmark"],
+  "license": "MIT",
+  "repository": { "type": "git", "url": "https://github.com/sulthonzh/tsdown" },
+  "engines": { "node": ">=16" }
+}
