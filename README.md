@@ -1,12 +1,10 @@
 # tsdown
 
-Analyze TypeScript compilation time per file. Find slow files, bottlenecks, and track build performance.
+Analyze TypeScript compilation time per file. Find your slowest types.
 
 ## Why?
 
-TypeScript builds get slow. You know it when your `tsc` takes 30 seconds and you have no idea why. `tsdown` tells you exactly which files are killing your build time.
-
-Instead of guessing "is it that massive generic utility file?", you get a ranked list of files by estimated compilation cost — type annotations, generics, interfaces, imports, all factored in.
+TypeScript projects get slow. You know it's slow, but which files are the bottleneck? `tsdown` runs `tsc --extendedDiagnostics` and breaks down compilation time per file so you can actually fix the problem instead of just waiting.
 
 ## Install
 
@@ -14,85 +12,88 @@ Instead of guessing "is it that massive generic utility file?", you get a ranked
 npm install -g tsdown
 ```
 
+Or use directly:
+
+```bash
+npx tsdown
+```
+
 ## Usage
 
-### Analyze a project
-
 ```bash
-tsdown ./src
+# Analyze current project
+tsdown
+
+# Top 10 slowest files
+tsdown --top 10
+
+# Only show files above 100ms
+tsdown --threshold 100
+
+# Group by extension and directory
+tsdown --by-ext --by-dir
+
+# JSON output for scripting
+tsdown --json
+
+# CI mode — exit 1 if critical files found
+tsdown --ci
+
+# Specific tsconfig
+tsdown --tsconfig tsconfig.prod.json
+
+# Different project directory
+tsdown ./packages/api
 ```
 
-Output:
+## Output
 
 ```
-File              Lines  Types  Generic  Import    Est Cost  Bar
-────────────────  ──────  ─────  ───────  ──────  ─────────  ──────────────────────────────
-types.ts            450    120       45      30        1200  ██████████████████████████████
-utils.ts            280     60       20      15         650  ████████████████
-service.ts          150     25        5       8         340  ████████
-index.ts             50      5        0       3         100  ██
+TypeScript Compilation Time Analysis
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Total: 4 files | 930 lines | Est cost: 2290
-Bottleneck files (80% of cost): 2 files
+Files: 42  Total: 3200ms  Avg: 76ms  Median: 45ms
+P95: 210ms  P99: 450ms
+
+Top 10 slowest files:
+────────────────────────────────────────────────────────────────────────────────
+🔴 450ms    █████████████████████████░  14%  src/types/schema.ts
+🔴 380ms    █████████████████████░░░░░  11%  src/models/User.ts
+🟡 210ms    ████████████░░░░░░░░░░░░░░   6%  src/api/handlers.ts
+🔵 120ms    ██████░░░░░░░░░░░░░░░░░░░░   3%  src/utils/validators.ts
+🟢 45ms     ██░░░░░░░░░░░░░░░░░░░░░░░░   1%  src/index.ts
+...
+
+💡 Tips:
+  - 2 file(s) in critical zone (>450ms). Consider splitting.
+  - Run with --byDir to find hotspots in your codebase.
 ```
 
-### From tsc diagnostics
+## How It Works
 
-Pipe actual compilation times:
+`tsdown` runs `tsc --extendedDiagnostics --noEmit` and parses the per-file timing output. No build system integration needed, no plugins, no config — just point it at a TypeScript project.
 
-```bash
-tsc --extendedDiagnostics | tsdown --stdin
-```
+## Severity Levels
 
-### JSON output
+| Level | Condition | Icon |
+|-------|-----------|------|
+| Critical | ≥ P99 | 🔴 |
+| Slow | ≥ P95 | 🟡 |
+| Moderate | ≥ Average | 🔵 |
+| Fast | Below average | 🟢 |
 
-```bash
-tsdown . --json > report.json
-```
-
-### Options
-
-```
---top <n>        Show top N slowest files (default: 20)
---sort <field>   Sort by: estimatedCost, lines, typeAnnotations, generics
---threshold <n>  Only show files with cost >= n
---show-path      Show full file paths
---json           Output as JSON
---stdin          Read tsc diagnostics from stdin
-```
-
-### Programmatic API
+## Programmatic API
 
 ```js
-const { analyze } = require('tsdown');
+const { runDiagnostics, renderReport, calculateStats } = require('tsdown');
 
-const report = analyze('./src', { top: 10, format: 'table' });
-console.log(report);
-
-// Or get structured data
-const data = analyze('./src', { format: 'json' });
-const parsed = JSON.parse(data);
-console.log(`Top bottleneck: ${parsed.topFiles[0].file}`);
+const files = runDiagnostics('./my-project');
+console.log(renderReport(files, { top: 10, byExt: true }));
 ```
 
-## How it works
+## Zero Dependencies
 
-For static analysis, `tsdown` scans your `.ts`/`.tsx` files and estimates compilation cost based on:
-
-- **Lines** — base overhead
-- **Type annotations** — `: string`, `: number`, complex types
-- **Generics** — `<T>`, `<T extends U>` — expensive for the compiler
-- **Interfaces & type aliases** — type system work
-- **Decorators** — additional transform overhead
-- **Imports** — module resolution cost
-
-It also identifies **bottleneck files** — the smallest set of files responsible for 80% of your total estimated compilation cost.
-
-If you pipe `tsc --extendedDiagnostics` output, it uses actual measured times instead.
-
-## Zero dependencies
-
-No `node_modules` bloat. Just one file that does its job.
+No runtime dependencies. Just Node.js and TypeScript in your project.
 
 ## License
 
